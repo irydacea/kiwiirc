@@ -87,6 +87,7 @@
 'kiwi public';
 
 import _ from 'lodash';
+import emojiRegex from 'emoji-regex/RGI_Emoji';
 import * as Misc from '@/helpers/Misc';
 import Logger from '@/libs/Logger';
 import BouncerProvider from '@/libs/BouncerProvider';
@@ -141,12 +142,25 @@ export default {
         },
         isNickValid() {
             let nickPatternStr = this.$state.setting('startupOptions.nick_format');
+            let nickAllowEmoji = this.$state.setting('startupOptions.nick_emoji_allowed');
             let nickPattern = '';
-            if (!nickPatternStr) {
+            if (!nickPatternStr && !nickAllowEmoji) {
                 // Nicks cannot start with [0-9- ]
                 // ? is not a valid nick character but we allow it as it gets replaced
                 // with a number.
                 nickPattern = /^[a-z_\\[\]{}^`|][a-z0-9_\-\\[\]{}^`|]*$/i;
+            } else if (!nickPatternStr) {
+                return ![...this.nick].some((char, n) => {
+                    if (n === 0 && !char.match(/^[a-z_\\[\]{}^`|]/i) && !char.match(emojiRegex())) {
+                        return true;
+                    }
+
+                    if (n !== 0 && !char.match(/^[0-9a-z_\-\\[\]{}^`|]/i) && !char.match(emojiRegex())) {
+                        return true;
+                    }
+
+                    return false;
+                });
             } else {
                 // Support custom pattern matches. Eg. only '@example.com' may be allowed
                 // on some IRCDs
